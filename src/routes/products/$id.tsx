@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start';
 import { ArrowLeftIcon, ShoppingBagIcon, SparkleIcon } from 'lucide-react';
 import type { ProductSelect } from '@/db/schema';
 // import { getProductById, getRecommendedProducts } from '@/data/products';
@@ -10,6 +11,31 @@ import { Skeleton } from '@/components/ui/skeleton';
 // import { ProductSelect } from '@/db/schema';
 // import { sampleProducts } from '@/db/seed'
 
+const fetchProductById = createServerFn({
+		method: 'POST'
+	})
+	.inputValidator((data: { id: string }) => data)
+	.handler(async ({ data }) => {
+		const { getProductById } = await import('@/data/products');
+		const product = await getProductById(data.id);
+
+		return (
+			product
+		);
+	});
+
+const fetchRecommendedProducts = createServerFn({
+		method: 'GET'
+	}).handler(
+		async () => {
+			const { getRecommendedProducts } = await import('@/data/products');
+
+			return (
+				getRecommendedProducts()
+			);
+		}
+	);
+
 export const Route = createFileRoute('/products/$id')({
 	component: RouteComponent,
 	// loader: async ({ params }) => {
@@ -18,18 +44,21 @@ export const Route = createFileRoute('/products/$id')({
 	// 	);
 	// }
 	loader: async ({ params }) => {
-		const { getRecommendedProducts, getProductById } = await import('@/data/products');
-		const recommendedProducts = getRecommendedProducts();
-		const product = await getProductById(params.id);
+		// Use server functions to ensure server-only execution
+		const product = await fetchProductById({ data: { id: params.id } });
 
 		if (!product) {
 			throw notFound();
-			// throw new Error(`Product with  id ${params.id} not found!`);
 		}
+
+		// Return recommendedProducts as a Promise for Suspense
+		const recommendedProducts = fetchRecommendedProducts();
+
+		console.log('product', product);
 
 		return ({
 			product,
-			recommendedProducts: recommendedProducts
+			recommendedProducts
 		});
 	},
 	// head: async ({ loaderData: product }: { loaderData: ProductSelect | null }) => {
