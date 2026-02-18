@@ -4,7 +4,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from './ui/button';
 import {
 	Card,
-	CardAction,
 	CardContent,
 	CardDescription,
 	CardFooter,
@@ -31,7 +30,7 @@ export function ProductCard({ product }: { product: ProductSelect }) {
 			params={{ id: product.id}}
 			className='cursor-pointer h-full hover:-translate-y-1 hover:shadow-lg transition'
 		>
-			<Card className='px-2 py-4'>
+			<Card className='px-2 py-4 h-[100%]'>
 				<CardHeader className='gap-2'>
 					<div className='flex items-center gap-2'>
 						{

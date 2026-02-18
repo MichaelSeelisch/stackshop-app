@@ -1,7 +1,9 @@
 import { Suspense } from 'react';
-import { Link, createFileRoute, notFound } from '@tanstack/react-router'
+import { Link, createFileRoute, notFound, useRouter } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start';
 import { ArrowLeftIcon, ShoppingBagIcon, SparkleIcon } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { mutateCartFn } from '../cart';
 import type { ProductSelect } from '@/db/schema';
 // import { getProductById, getRecommendedProducts } from '@/data/products';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,12 +106,14 @@ export const Route = createFileRoute('/products/$id')({
 })
 
 function RouteComponent() {
-	const { id } = Route.useParams();
+	const queryClient = useQueryClient();
+	const router = useRouter();
+
 	const { product, recommendedProducts } = Route.useLoaderData();
 
   	return (
-		<div>
-			<Card className='max-w-4xl mx-auto !p-6'>
+		<div className='pb-12'>
+			<Card className='max-w-4xl mx-auto p-6'>
 				<Link to='/products' className='inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700'>
 					<ArrowLeftIcon size={16} />
 					Back to products
@@ -175,7 +179,28 @@ function RouteComponent() {
 
 							<CardFooter className='pt-0 flex items-center justify-between border-t-0 bg-transparent'>
 								<div className='flex flex-wrap gap-3'>
-									<Button className='bg-slate-900 px-4 text-white shadow-sm transition hover:translate-y-0.5 hover:shadow-md dark:bg-white dark:text-slate-900'>
+									<Button
+										className='bg-slate-900 px-4 text-white shadow-sm transition hover:translate-y-0.5 hover:shadow-md dark:bg-white dark:text-slate-900'
+										onClick={async (e) => {
+											console.log('Add to Cart');
+
+											e.preventDefault();
+											e.stopPropagation();
+
+											await mutateCartFn({
+												data: {
+													action: 'add',
+													productId: product.id,
+													quantity: 1
+												}
+											});
+
+											await router.invalidate({ sync: true })
+											await queryClient.invalidateQueries({
+												queryKey: ['cart-items-data']
+											});
+										}}
+									>
 										<ShoppingBagIcon size={16} />
 										Add to cart
 									</Button>
@@ -191,22 +216,24 @@ function RouteComponent() {
 					</div>
 				</Card>
 
-				<Suspense fallback={
-					<>
-						<h2 className='text-2xl font-bold my-4'>
-							Recommended Products
-						</h2>
-						<div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-							{Array.from({ length: 6 }).map((_, index) => {
-								return (
-									<Skeleton key={index} className='w-full h-48' />
-								);
-							})}
-						</div>
-					</>
-				}>
-					<RecommendedProducts recommendedProducts={recommendedProducts} />
-				</Suspense>
+				<div className='mb-6'>
+					<Suspense fallback={
+						<>
+							<h2 className='text-2xl font-bold my-4'>
+								Recommended Products
+							</h2>
+							<div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+								{Array.from({ length: 6 }).map((_, index) => {
+									return (
+										<Skeleton key={index} className='w-full h-48' />
+									);
+								})}
+							</div>
+						</>
+					}>
+						<RecommendedProducts recommendedProducts={recommendedProducts} />
+					</Suspense>
+				</div>
 			</Card>
 		</div>
 	);
